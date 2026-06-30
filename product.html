@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilibili Fav Extractor — 让收藏不再吃灰</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;background:#0a0e1a;color:#e0e0e0;line-height:1.7;overflow-x:hidden}
+
+:root{
+  --bg-deep:#0a0e1a;
+  --bg-card:#111827;
+  --bg-card-hover:#1a2332;
+  --accent-blue:#4d8cff;
+  --accent-purple:#9b6dff;
+  --accent-cyan:#00d4ff;
+  --accent-green:#34d399;
+  --accent-orange:#ff9800;
+  --accent-red:#ff6b6b;
+  --text-muted:#8892a4;
+  --radius:14px;
+  --shadow-card:0 4px 24px rgba(0,0,0,.3);
+}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;background:rgba(10,14,26,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.06)}
+nav .logo{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+nav .logo span{color:var(--accent-blue)}
+nav .nav-links{display:flex;gap:20px;list-style:none}
+nav .nav-links a{color:var(--text-muted);text-decoration:none;font-size:14px;transition:color .2s}
+nav .nav-links a:hover{color:#fff}
+
+/* Sections */
+section{padding:80px 24px}
+.section-inner{max-width:1100px;margin:0 auto}
+h2{font-size:32px;font-weight:700;margin-bottom:12px;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-sub{font-size:15px;color:var(--text-muted);margin-bottom:48px;max-width:600px}
+
+/* Hero */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;padding-top:60px;position:relative;overflow:hidden}
+#hero::before{content:'';position:absolute;top:-30%;left:-20%;width:80%;height:80%;background:radial-gradient(ellipse at center, rgba(77,140,255,.08) 0%, transparent 70%);pointer-events:none}
+#hero::after{content:'';position:absolute;bottom:-20%;right:-10%;width:60%;height:60%;background:radial-gradient(ellipse at center, rgba(155,109,255,.06) 0%, transparent 70%);pointer-events:none}
+.hero-content{position:relative;z-index:1;text-align:center;max-width:800px}
+.hero-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(77,140,255,.15);color:var(--accent-blue);border:1px solid rgba(77,140,255,.25);margin-bottom:24px;letter-spacing:.5px}
+.hero-content h1{font-size:clamp(32px,5vw,56px);font-weight:800;letter-spacing:-1px;line-height:1.15;margin-bottom:20px;color:#fff}
+.hero-content h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-pain{font-size:15px;color:var(--text-muted);margin-bottom:24px;padding:16px 24px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.15);border-radius:12px;display:inline-block}
+.hero-pain strong{color:var(--accent-red);-webkit-text-fill-color:var(--accent-red)}
+.hero-desc{font-size:17px;color:var(--text-muted);margin-bottom:36px;max-width:600px;margin-left:auto;margin-right:auto}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer;border:none;transition:all .25s}
+.btn-primary{background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));color:#fff;box-shadow:0 4px 20px rgba(77,140,255,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(77,140,255,.4)}
+.btn-secondary{background:rgba(255,255,255,.08);color:#e0e0e0;border:1px solid rgba(255,255,255,.12)}
+.btn-secondary:hover{background:rgba(255,255,255,.14)}
+.hero-stats{display:flex;gap:40px;justify-content:center;margin-top:48px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat .num{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.hero-stat .num em{font-style:normal;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-stat .label{font-size:12px;color:var(--text-muted);margin-top:2px}
+
+/* Compatibility bar */
+.compat-bar{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:32px;padding:12px 20px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
+.compat-bar span{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted)}
+.compat-bar .check{color:var(--accent-green)}
+
+/* Features */
+#features{background:linear-gradient(180deg,#0a0e1a 0%,#0d1225 100%)}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.feature-card{background:var(--bg-card);border-radius:var(--radius);padding:28px 24px;border:1px solid rgba(255,255,255,.06);transition:all .3s;position:relative;overflow:hidden}
+.feature-card:hover{background:var(--bg-card-hover);border-color:rgba(77,140,255,.2);transform:translateY(-3px);box-shadow:var(--shadow-card)}
+.feature-card .icon{font-size:28px;margin-bottom:12px;display:block}
+.feature-card h3{font-size:17px;font-weight:700;color:#fff;margin-bottom:8px}
+.feature-card p{font-size:13px;color:var(--text-muted);line-height:1.65}
+.feature-card .tag{display:inline-block;margin-top:10px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.feature-card .tag.new{background:rgba(52,211,153,.15);color:var(--accent-green)}
+.feature-card .tag.hot{background:rgba(255,152,0,.15);color:var(--accent-orange)}
+
+/* Demo */
+#demo{background:#0d1225}
+.demo-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+@media(max-width:768px){.demo-layout{grid-template-columns:1fr}}
+.demo-text h2{margin-bottom:12px}
+.demo-text p{font-size:14px;color:var(--text-muted);margin-bottom:20px}
+.demo-tree{background:var(--bg-card);border-radius:var(--radius);padding:24px;border:1px solid rgba(255,255,255,.06);font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px;line-height:1.8;overflow-x:auto}
+.demo-tree .tree-line{padding:2px 0;white-space:pre;color:#c0c8d4}
+.demo-tree .tree-line.folder{color:var(--accent-blue);font-weight:600}
+.demo-tree .tree-line.sub{padding-left:24px;color:#94a3b8}
+.demo-tree .tree-line.sub2{padding-left:48px;color:var(--text-muted);font-size:12px}
+.demo-tree .tree-line.tree-end{padding-left:24px;color:var(--text-muted)}
+.demo-tree .tree-line .count{color:var(--text-muted);font-size:11px}
+.demo-tree .highlight{color:var(--accent-green)}
+.demo-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-right:4px}
+.demo-tag.ai{background:rgba(77,140,255,.15);color:var(--accent-blue)}
+.demo-tag.tool{background:rgba(255,152,0,.15);color:var(--accent-orange)}
+.demo-tag.biz{background:rgba(52,211,153,.15);color:var(--accent-green)}
+.demo-features{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.demo-features{grid-template-columns:1fr}}
+.demo-feat{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);padding:8px 12px;background:var(--bg-card);border-radius:8px;border:1px solid rgba(255,255,255,.04)}
+.demo-feat .d-icon{font-size:16px}
+
+/* Install */
+#install{background:linear-gradient(180deg,#0d1225 0%,#0a0e1a 100%)}
+.install-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:32px}
+@media(max-width:768px){.install-steps{grid-template-columns:1fr}}
+.install-step{background:var(--bg-card);border-radius:var(--radius);padding:28px 24px;text-align:center;border:1px solid rgba(255,255,255,.06);position:relative}
+.install-step .step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.install-step h4{font-size:15px;font-weight:700;color:#fff;margin-bottom:6px}
+.install-step p{font-size:12px;color:var(--text-muted);line-height:1.5}
+.install-step code{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.08);color:var(--accent-cyan);font-size:11px}
+.install-note{text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted);padding:16px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid rgba(255,255,255,.06)}
+
+/* FAQ */
+#faq{background:#0d1225}
+.faq-list{max-width:700px;margin:0 auto}
+.faq-item{border-bottom:1px solid rgba(255,255,255,.06);padding:20px 0}
+.faq-item:last-child{border-bottom:none}
+.faq-q{font-size:15px;font-weight:600;color:#e0e0e0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.faq-q:hover{color:#fff}
+.faq-q .arrow{transition:transform .3s;font-size:12px;color:var(--text-muted)}
+.faq-q.open .arrow{transform:rotate(180deg)}
+.faq-a{font-size:13px;color:var(--text-muted);line-height:1.7;padding-top:12px;display:none}
+.faq-a.open{display:block}
+
+/* Download CTA */
+#download{text-align:center;padding:80px 24px;background:linear-gradient(135deg,rgba(77,140,255,.06),rgba(155,109,255,.06))}
+#download h2{margin-bottom:12px;font-size:clamp(24px,3vw,36px)}
+#download p{color:var(--text-muted);font-size:15px;margin-bottom:12px}
+#download .version-info{font-size:12px;color:#555;margin-bottom:28px}
+#download .file-info{font-size:12px;color:#555;margin-top:8px}
+
+/* Footer */
+footer{text-align:center;padding:32px 24px;border-top:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--text-muted)}
+footer a{color:var(--accent-blue);text-decoration:none}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .6s ease-out forwards;opacity:0}
+.anim-d1{animation-delay:.1s}
+.anim-d2{animation-delay:.2s}
+.anim-d3{animation-delay:.3s}
+.anim-d4{animation-delay:.4s}
+.anim-d5{animation-delay:.5s}
+.anim-d6{animation-delay:.6s}
+
+/* Responsive */
+@media(max-width:600px){
+  section{padding:48px 16px}
+  h2{font-size:26px}
+  .hero-content h1{font-size:28px}
+  nav .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="logo">🎬 Bili<span>Fav</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">功能</a></li>
+    <li><a href="#demo">效果</a></li>
+    <li><a href="#install">安装</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#download" style="color:var(--accent-blue);font-weight:600">下载</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section id="hero">
+  <div class="hero-content">
+    <div class="hero-badge anim anim-d1">🧩 Chrome 扩展 · 免费 · 无需注册</div>
+    <h1 class="anim anim-d2">
+      你的 B站 收藏夹<br>
+      是知识宝库，还是<em>数字坟场</em>？
+    </h1>
+    <div class="hero-pain anim anim-d3">
+      <strong>😬 收藏从未停止，观看从未开始</strong> — 几千条视频堆在收藏夹里，想找找不到，想看理不清
+    </div>
+    <p class="hero-desc anim anim-d4">
+      <strong>Bilibili Fav Extractor</strong> 一键爬取你的全部收藏，AI 自动分类整理，导出为结构化学习笔记。<br>
+      把杂乱的收藏夹，变成属于你自己的知识库。
+    </p>
+    <div class="hero-actions anim anim-d5">
+      <a href="#download" class="btn btn-primary">📥 下载插件</a>
+      <a href="#features" class="btn btn-secondary">看看怎么用 →</a>
+    </div>
+    <div class="compat-bar anim anim-d6">
+      <span><span class="check">✓</span> Chrome</span>
+      <span><span class="check">✓</span> Edge</span>
+      <span><span class="check">✓</span> 360极速</span>
+      <span><span class="check">✓</span> Brave</span>
+      <span><span class="check">✓</span> 其他 Chromium 内核浏览器</span>
+    </div>
+    <div class="hero-stats anim anim-d6">
+      <div class="hero-stat"><div class="num"><em>25,000+</em></div><div class="label">单次可提取视频</div></div>
+      <div class="hero-stat"><div class="num"><em>80+</em></div><div class="label">细分分类</div></div>
+      <div class="hero-stat"><div class="num"><em>2 种</em></div><div class="label">导出格式 (HTML/MD)</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-inner">
+    <h2>为什么你需要它</h2>
+    <p class="section-sub">从「收藏了再说」到「整理了再看」，中间只差这一个插件</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="icon">🤖</span>
+        <h3>AI 智能分类引擎</h3>
+        <p>内置覆盖 AI/编程工具/创业搞钱 三大方向的四级分类体系，共 <strong>80+</strong> 个细分标签。从 LLM 原理到 Agent 开发、从 Claude Code 到 SaaS 产品化，一条视频自动归到最精确的位置。</p>
+        <span class="tag hot">核心功能</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🏷️</span>
+        <h3>自定义主题</h3>
+        <p>自己设定分类名称和关键词，插件按关键词智能匹配。支持拼音/英文/中文混合，去标点匹配、英文词边界隔离、多词 AND 逻辑。最多 5 个自定义主题，完美补充内置分类。</p>
+        <span class="tag new">v2.0 新增</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">📥</span>
+        <h3>一键导出笔记</h3>
+        <p>提取完成后一键下载结构化 HTML 或 Markdown 笔记。<br><strong>HTML</strong>：全文搜索、目录折叠跳转、按月分组浏览。<br><strong>Markdown</strong>：可直接导入 Obsidian、Notion、Typora 等笔记软件。</p>
+        <span class="tag hot">核心功能</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">📜</span>
+        <h3>提取历史管理</h3>
+        <p>每次提取自动存入历史。可随时查看旧结果、重新下载笔记。不需要的历史记录支持单条删除。最多保留 10 次提取记录，不丢失任何一次整理的成果。</p>
+        <span class="tag new">v2.0 新增</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🔌</span>
+        <h3>双模连接</h3>
+        <p>已登录 B 站 → 自动利用浏览器登录态直接连接。<br>未登录 → 粘贴 Cookie 即可，智能识别 JSON / cookies.txt / 全文粘贴 多种格式。</p>
+      </div>
+      <div class="feature-card">
+        <span class="icon">⚡</span>
+        <h3>批量 + 稳定</h3>
+        <p>支持自定义数量（0=全部）。限流自动等待 5 分钟恢复，网络超时自动重试。提取过程中可随时取消，已获取数据自动保存不丢失。</p>
+      </div>
+      <div class="feature-card">
+        <span class="icon">📊</span>
+        <h3>按月分组浏览</h3>
+        <p>分类下视频超过 50 条时，自动按收藏时间分月展示。最新月份优先，一眼看清你每个月都在关注什么方向。</p>
+        <span class="tag new">v2.0 新增</span>
+      </div>
+      <div class="feature-card">
+        <span class="icon">🔒</span>
+        <h3>数据全在本地</h3>
+        <p>所有提取和分类操作都在你的浏览器本地完成。不上传任何数据到服务器。你的收藏夹内容只有你自己知道，隐私绝对安全。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Demo -->
+<section id="demo">
+  <div class="section-inner">
+    <div class="demo-layout">
+      <div class="demo-text">
+        <h2>你的收藏夹，变成一棵知识树</h2>
+        <p>爬取完成后，几千条视频自动变成一棵清晰的分类树。目录可折叠、可搜索、可按月筛选。</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">👇 以下为真实提取效果示意（基于 2,384 条收藏）</p>
+        <div class="demo-features">
+          <div class="demo-feat"><span class="d-icon">🔍</span> 全文搜索</div>
+          <div class="demo-feat"><span class="d-icon">📌</span> 目录跳转</div>
+          <div class="demo-feat"><span class="d-icon">📅</span> 按月分组</div>
+          <div class="demo-feat"><span class="d-icon">↕</span> 折叠展开</div>
+          <div class="demo-feat"><span class="d-icon">🏷️</span> 分类标签</div>
+          <div class="demo-feat"><span class="d-icon">⬇</span> 一键导出</div>
+        </div>
+      </div>
+      <div class="demo-tree">
+        <div class="tree-line folder">📂 收藏夹：AI方向学习（2,384条）</div>
+        <div class="tree-line sub">├─ <span class="demo-tag ai">AI</span> <span class="highlight">AI/人工智能</span> <span class="count">（1,532条）</span></div>
+        <div class="tree-line sub2">│  ├─ 1.1 LLM原理与架构（89条）</div>
+        <div class="tree-line sub2">│  ├─ 1.2 Agent/智能体（156条）</div>
+        <div class="tree-line sub2">│  ├─ 1.3 AI学习路径与入门教程（412条）</div>
+        <div class="tree-line sub2">│  └─ 1.4 AI编程/代码生成（203条）</div>
+        <div class="tree-line sub">├─ <span class="demo-tag tool">TOOL</span> <span class="highlight">AI编程工具</span> <span class="count">（124条）</span></div>
+        <div class="tree-line sub2">│  ├─ 2.1 Claude Code安装配置与入门（22条）</div>
+        <div class="tree-line sub2">│  ├─ 2.2 Cursor使用技巧（18条）</div>
+        <div class="tree-line sub2">│  └─ 2.3 Vibe Coding项目实战（31条）</div>
+        <div class="tree-line sub">└─ <span class="demo-tag biz">BIZ</span> <span class="highlight">创业/搞钱</span> <span class="count">（728条）</span></div>
+        <div class="tree-line sub2">   ├─ 3.1 超级个体理念与规划（45条）</div>
+        <div class="tree-line sub2">   ├─ 3.2 自媒体起号与涨粉（112条）</div>
+        <div class="tree-line sub2">   ├─ 3.3 价值投资/复利（67条）</div>
+        <div class="tree-line sub2">   └─ 3.4 赚钱思维与底层逻辑（203条）</div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)">
+          <div class="tree-line tree-end">📅 按月分组：2026年6月（45条）→ 5月（38条）→ 4月（52条）→ ...</div>
+          <div class="tree-line tree-end">🔍 搜索过滤：输入「Agent」「微调」「变现」实时筛选</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <div class="section-inner" style="text-align:center">
+    <h2>三步安装</h2>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto">无需上架商店，下载即用。Chrome / Edge / 360 都支持</p>
+    <div class="install-steps">
+      <div class="install-step">
+        <div class="step-num">1</div>
+        <h4>下载并解压</h4>
+        <p>点击下方按钮下载 <code>BilibiliFavExtractor_v2.zip</code>，解压到本地一个文件夹。</p>
+      </div>
+      <div class="install-step">
+        <div class="step-num">2</div>
+        <h4>打开扩展管理页</h4>
+        <p>Chrome 地址栏输入 <code>chrome://extensions</code><br>（Edge 用户输入 <code>edge://extensions</code>）</p>
+        <p style="margin-top:6px">打开右上角「<strong style="color:#fff">开发者模式</strong>」开关。</p>
+      </div>
+      <div class="install-step">
+        <div class="step-num">3</div>
+        <h4>加载扩展</h4>
+        <p>点击「<strong style="color:#fff">加载已解压的扩展程序</strong>」，选择刚才解压的文件夹。</p>
+        <p style="margin-top:6px;color:var(--accent-green)">✅ 安装完成！去 bilibili.com 开始使用</p>
+      </div>
+    </div>
+    <div class="install-note">
+      💡 插件更新时，只需在 <code>chrome://extensions</code> 点插件卡片上的「🔄 刷新」按钮即可，无需重新安装。
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-inner">
+    <h2 style="text-align:center">常见问题</h2>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto;text-align:center">你可能想知道的</p>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>提取速度怎么样？2 万条要多久？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">每页 40 条，每页约 0.5~1 秒。2 万条大约 5~8 分钟。如果遇到 B 站限流（-412），插件会自动等待 5 分钟后继续，总时间可能延长到 10~15 分钟。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>需要登录 B 站账号吗？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">推荐在浏览器中登录 B 站账号，点「连接」即可自动识别。如果不想登录，也可以粘贴 Cookie（支持 JSON / cookies.txt / 全文三种格式）。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>提取的数据安全吗？会传到服务器吗？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">所有操作都在你的浏览器本地完成。提取的视频数据、分类结果、生成的笔记全部只保存在你电脑上，不上传任何服务器。Cookie 也只存在浏览器本地存储中。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>自定义主题的关键词怎么设置比较好？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">建议列出该主题下最常出现的词汇，用逗号分隔。插件支持去标点匹配（"AI编程" ≈ "AI 编程"）、英文词边界（"AI" 不会误匹配 "TRAIN"）、多词 AND（"AI 编程"要求两个词同时出现）。同义词尽量都写上，比如写 "AI,人工智能,大模型,chatgpt"。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>生成的笔记可以在 Obsidian 里用吗？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">Markdown 格式完全兼容 Obsidian、Notion、Typora 等主流笔记软件。HTML 格式适合直接在浏览器中打开阅读，支持搜索和目录跳转。</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          <span>支持只提取部分收藏夹吗？</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="faq-a">可以。连接后插件会列出你所有收藏夹，选择一个即可。还支持设置提取数量（0=全部，100=只提取 100 条）。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Download CTA -->
+<section id="download">
+  <h2>现在就试试</h2>
+  <p>把几千条吃灰收藏，变成你的结构化知识库</p>
+  <p class="version-info">最新版本：v2.0 · 更新于 2026-06-18</p>
+  <a href="BilibiliFavExtractor_v2.zip" class="btn btn-primary" style="font-size:18px;padding:16px 48px" download>📥 下载插件 v2.0</a>
+  <p class="file-info">文件大小约 27KB · 解压即用</p>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>Bilibili Fav Extractor · 免费 · 开源 · 专为 B站 收藏爱好者打造</p>
+  <p style="margin-top:4px">支持 Chrome / Edge / 360极速 / Brave 等 Chromium 内核浏览器</p>
+</footer>
+
+<script>
+function toggleFaq(el) {
+  el.classList.toggle('open');
+  var answer = el.nextElementSibling;
+  answer.classList.toggle('open');
+}
+
+(function(){
+  var els = document.querySelectorAll('.feature-card, .install-step, .demo-layout > *, .faq-item');
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; obs.unobserve(e.target); }
+    });
+  }, { threshold:.1 });
+  els.forEach(function(el){
+    el.style.transition='opacity .5s ease, transform .5s ease';
+    el.style.opacity='0';
+    el.style.transform='translateY(20px)';
+    obs.observe(el);
+  });
+})();
+</script>
+
+</body>
+</html>
